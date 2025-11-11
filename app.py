@@ -87,5 +87,34 @@ def main():
     else:
         print("No film index specified (--index)")
 
+    # Handle --do-thing action
+    if args.do_thing:
+        if args.index is None:
+            print("Error: --do-thing requires an --index value to specify the starting shot")
+            return
+        
+        from annotate import annotate_shots
+        
+        # Get all shot indices from the index onwards
+        shot_indices = []
+        current_index = args.index
+        
+        while True:
+            shot_file = data_dir / f"{current_index:04d}.shot.json"
+            if not shot_file.exists():
+                break
+            shot_indices.append(current_index)
+            current_index += 1
+        
+        if not shot_indices:
+            print(f"No shots found starting from index {args.index:04d}")
+            return
+        
+        print(f"Found {len(shot_indices)} shots to annotate (from {shot_indices[0]:04d} to {shot_indices[-1]:04d})")
+        annotate_shots(shot_indices, data_dir)
+        return
+    
+    # Handle --annotate action (existing code)
+
 if __name__ == "__main__":
     main()
