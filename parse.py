@@ -46,18 +46,6 @@ def parse_arguments():
         default=None,
         help="How many shots to annotate (default: until end)"
     )
-    parser.add_argument(
-        "--annotate",
-        type=str,
-        metavar="TYPE",
-        help="Annotate items of a specific type (e.g., 'shot', 'sequence')"
-    )
-    
-    parser.add_argument(
-        "--do-thing",
-        action="store_true",
-        help="Annotate all shots starting from the specified --index until the last valid shot"
-    )
 
     # If no args were provided, print help and exit
     if len(sys.argv) == 1:
