@@ -16,17 +16,24 @@ def parse_arguments():
         "--index",
         type=int,
         default=-1,
-        help="Film index from cinematheque.csv (-1 = none)"
+        help="Film index from cinematheque.csv or gameplay.csv (-1 = none)"
     )
     parser.add_argument(
         "--action",
         choices=['erase', 'annotate'],
-        help="Action to perform on the selected film"
+        help="Action to perform on the selected item"
     )
     parser.add_argument(
         "--type",
         choices=['scene', 'shot'],
-        help="Type of caption to operate on (scene or shot)"
+        default='shot',
+        help="Type of caption to operate on (default: shot)"
+    )
+    parser.add_argument(
+        "--media",
+        choices=['movie', 'gameplay'],
+        default='movie',
+        help="Media type to work with (default: movie)"
     )
     # New options
     parser.add_argument(
