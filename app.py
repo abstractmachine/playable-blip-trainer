@@ -95,7 +95,14 @@ def main():
             else:
                 print("No shotlist found for this item")
     else:
-        print(f"No {media_type} index specified (--index)")
+        # No index specified - print all items with their indices
+        print(f"\nAvailable {media_type} items:")
+        print("=" * 60)
+        for i, item in enumerate(library.items):
+            title = library.get_title(item)
+            print(f"{i}\t{title}")
+        print("=" * 60)
+        print(f"Total: {len(library.items)} items")
 
 if __name__ == "__main__":
     main()
