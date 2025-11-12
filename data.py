@@ -171,4 +171,4 @@ class Gameplay(MediaLibrary):
 
     def get_title(self, item: Dict) -> str:
         """Get the display title for a gameplay video."""
-        return item.get('Title', 'Unknown')
+        return item.get('title', 'Unknown')
