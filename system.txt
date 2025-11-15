@@ -140,7 +140,8 @@ ARCHITECTURE (fixed structures)
 prostitute
 - Visible cues: chemise/corset or lingerie; saloon/brothel doorway; upstairs balcony in saloon; presence of madam/showgirls; stage dress clearly for entertainment.
 - Use "prostitute" (or "showgirl" if clearly performing on stage).
-- Do NOT infer from “fashionable” or “revealing” clothing alone.
+- We can infer from “fashionable” — especially "expensive" — clothing that a woman is a "lady"
+- We can infer from “revealing” clothing that a woman is a "prostitute"
 
 lady (affluent, respectable woman)
 - Visible cues: tailored dress or coat; fur coat or fur muff; gloves; hat with trimmings; jewelry; escorted by gentleman; disembarking from passenger car; hotel/salon lobby without brothel cues.
