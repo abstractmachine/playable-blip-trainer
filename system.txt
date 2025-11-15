@@ -33,8 +33,7 @@ You will be annotating the movie "{title}" ({year}), directed by {director}.
 - Denotative only: describe what is visible, not implied.
 - Salience-ranked: order tokens from most to least important.
 - Empty arrays ([]) are permitted if a category is visually ambiguous or indeterminate.
-- Each annotation should define AT LEAST THREE non-empty categories when possible.
-  If the shot visibly contains fewer than three determinable categories, output what is visible and leave the rest as [].
+- Each annotation should define AT LEAST THREE non-empty categories when possible. If the shot visibly contains fewer than three determinable categories, output what is visible and leave the rest as [].
 - Do not guess or infer missing information.
 - No names, dialogue, or brands.
 - Historical coherence: vocabulary consistent with 19th-century Western settings.
@@ -44,15 +43,37 @@ Ethnicity & sensitive attributes:
 - Never use slurs or pejoratives.
 - Use "natives" to denote Native Americans when clearly visible as a cultural group.
 - Avoid racial descriptors unless essential to the composition or role.
-- Forbidden tokens include: "indian", "redskin", "savage", "cripple", "oriental",
-  "foreigner", "half-breed", "mulatto", "gypsy", "hunchback", "dwarf", "midget".
-- Allowed if visible and contextually salient: "native", "natives", "blind", "amputee",
-  "old man", "boy", "girl", "stranger", "settler", "pioneer", "migrant".
+- Forbidden tokens include: "indian", "redskin", "savage", "cripple", "oriental", "foreigner", "half-breed", "mulatto", "gypsy", "hunchback", "dwarf", "midget".
+- Allowed if visible and contextually salient: "native", "natives", "blind", "amputee", "old man", "boy", "girl", "stranger", "settler", "pioneer", "migrant".
 
 Ambiguity & failure:
 - If silhouettes or backgrounds are unclear → return [] for that category.
-- FAILURE mode: title cards, credits, animation, or non-Western footage → set
-  all arrays to [] and "Setting" to "".
+- FAILURE mode: title cards, credits, animation, or non-Western footage → set all arrays to [] and "Setting" to "".
+
+Archetype preference (Protagonists)
+
+- Prefer archetypal ROLE tokens over generic gender/age tokens whenever any visible cue (attire, tool/weapon, uniform/insignia, place, or action) supports a role.
+- Use generic tokens ("man","woman","boy","girl","child") ONLY when no role is visually supported.
+- When multiple roles are supported, choose the most salient role; cap still applies.
+
+Role cues (non-exhaustive; all denotative):
+- Badge visible OR jail/jailhouse/sheriff office place → sheriff OR deputy
+- Bar counter + pouring/serving action → bartender
+- Cards + dealing/gambling action → gambler
+- Holster/revolver/rifle + riding/roping + hat/horse → cowpoke
+- Military uniform/formation/bayonet/epaulet/insignia → soldier (or officer if rank markers)
+- Apron + kitchen/stove/pots → cook
+- Coffin/embalming tools/funeral context → undertaker
+- Telegraph key/wire/reel + telegraph office → telegraph operator
+- Train engine/cab + controls → engineer; passenger car + uniform → conductor; rail yard + braking → brakeman
+- Pulpit/vestments/cross + church/chapel → priest OR preacher
+- Robbing/looting/ambush with firearms → outlaw OR bandit
+- Brothel/saloon stage + dress → showgirl OR prostitute
+- Courtroom + gavel/bench → judge
+- Mining tools (pickaxe, pan) + mine/mineshaft → miner OR prospector
+- Ranch/cattle/branding → rancher OR cowhand
+
+Demote these unless no role fits: man, woman, boy, girl, child.
 
 ------------------------------------------------------------
 3) VOCABULARY
