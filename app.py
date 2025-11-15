@@ -18,15 +18,17 @@ def main():
         media_type = "film"
     
     print(f"Loaded {library}")
-    
-    if args.index >= 0:
-        item = library.get(args.index)
+
+    # Initialize Ollama once (used if/when annotating)
+    ollama = OllamaClient(model=args.model)
+
+    def process_item(index: int):
+        item = library.get(index)
         if not item:
-            print(f"Index {args.index} out of range (0-{len(library)-1})")
+            print(f"Index {index} out of range (0-{len(library)-1})")
             return
-        
-        print(f"\n{media_type.capitalize()} [{args.index}]: {library.get_title(item)}")
-        
+        print(f"\n{media_type.capitalize()} [{index}]: {library.get_title(item)}")
+
         if args.action == 'erase':
             if args.type == 'shot':
                 print("Erasing Shot_Caption entries...")
@@ -40,29 +42,26 @@ def main():
                     print("✓ Scene captions erased successfully")
                 else:
                     print("✗ Failed to erase scene captions")
-        
-        elif args.action == 'annotate':
+            return
+
+        if args.action == 'annotate':
             shotlist = library.load_shotlist(item)
             if not shotlist:
                 print("✗ No shotlist found for this item")
                 return
-            
+
             if args.type == 'shot':
                 video_path = library.get_video_path(item)
                 if not os.path.exists(video_path):
                     print(f"✗ Video file not found: {video_path}")
                     return
-                
+
                 frames_dir = os.path.join(args.project_root, "frames")
-
-                # Use model from CLI (default gemma3:27b)
-                ollama = OllamaClient(model=args.model)
-
                 print(f"Found video: {video_path}")
                 print(f"Saving frames to: {frames_dir}")
                 print("Annotating shots...")
 
-                shotlist = annotate_shots(
+                out_shotlist = annotate_shots(
                     shotlist=shotlist,
                     video_path=video_path,
                     film=item,
@@ -72,28 +71,59 @@ def main():
                     limit=args.annotation_count,
                     start_index=args.shot_index
                 )
-                if library.save_shotlist(item, shotlist):
+                if library.save_shotlist(item, out_shotlist):
                     print("\n✓ Shot captions annotated successfully")
                 else:
                     print("\n✗ Failed to save shot annotations")
-            
+
             elif args.type == 'scene':
                 if not has_scenes(shotlist):
                     print("✗ Cannot annotate scenes: No scene information found in shotlist")
+                    return
+                print("Annotating scenes...")
+                out_shotlist = annotate_scenes(shotlist)
+                if library.save_shotlist(item, out_shotlist):
+                    print("✓ Scene captions annotated successfully")
                 else:
-                    print("Annotating scenes...")
-                    shotlist = annotate_scenes(shotlist)
-                    if library.save_shotlist(item, shotlist):
-                        print("✓ Scene captions annotated successfully")
-                    else:
-                        print("✗ Failed to save scene annotations")
+                    print("✗ Failed to save scene annotations")
+            return
+
+        # No action: just info
+        shotlist = library.load_shotlist(item)
+        if shotlist:
+            print(f"Shotlist loaded: {len(shotlist)} shots")
+            print("Scene information:", "Available" if has_scenes(shotlist) else "Not available")
         else:
-            shotlist = library.load_shotlist(item)
-            if shotlist:
-                print(f"Shotlist loaded: {len(shotlist)} shots")
-                print("Scene information:", "Available" if has_scenes(shotlist) else "Not available")
-            else:
-                print("No shotlist found for this item")
+            print("No shotlist found for this item")
+
+    # Batch mode via --filelist
+    if args.filelist:
+        filelist_path = args.filelist
+        if not os.path.isabs(filelist_path):
+            filelist_path = os.path.join(os.getcwd(), filelist_path)
+        if not os.path.exists(filelist_path):
+            print(f"✗ Filelist not found: {filelist_path}")
+            return
+
+        with open(filelist_path, 'r', encoding='utf-8') as f:
+            names = [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith('#')]
+
+        if not names:
+            print("✗ Filelist is empty")
+            return
+
+        print(f"\nProcessing {len(names)} items from filelist ({media_type})...")
+        for name in names:
+            idx = library.find_by_filename(name)
+            if idx is None:
+                print(f"— Skipping (not found in metadata): {name}")
+                continue
+            process_item(idx)
+        return
+
+    # Single index mode
+    if args.index >= 0:
+        process_item(args.index)
     else:
         # No index specified - print all items with their indices
         print(f"\nAvailable {media_type} items:")

@@ -43,15 +43,12 @@ Ethnicity & sensitive attributes:
 - Never use slurs or pejoratives.
 - Use "natives" to denote Native Americans when clearly visible as a cultural group.
 - Avoid racial descriptors unless essential to the composition or role.
-- Forbidden tokens include: "indian", "redskin", "savage", "cripple", "oriental",
-  "foreigner", "half-breed", "mulatto", "gypsy", "hunchback", "dwarf", "midget".
-- Allowed if visible and contextually salient: "native", "natives", "blind", "amputee",
-  "old man", "boy", "girl", "stranger", "settler", "pioneer", "migrant".
+- Forbidden tokens include: "indian", "redskin", "savage", "cripple", "oriental", "foreigner", "half-breed", "mulatto", "gypsy", "hunchback", "dwarf", "midget".
+- Allowed if visible and contextually salient: "native", "natives", "blind", "amputee", "old man", "boy", "girl", "stranger", "settler", "pioneer", "migrant".
 
 Ambiguity & failure:
 - If silhouettes or backgrounds are unclear → return [] for that category.
-- FAILURE mode: title cards, credits, animation, or non-Western footage → set
-  all arrays to [] and "Setting" to "".
+- FAILURE mode: title cards, credits, animation, or non-Western footage → set all arrays to [] and "Setting" to "".
 
 ------------------------------------------------------------
 3) VOCABULARY

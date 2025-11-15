@@ -53,6 +53,12 @@ def parse_arguments():
         default=None,
         help="How many shots to annotate (default: until end)"
     )
+    parser.add_argument(
+        "--filelist",
+        type=str,
+        default=None,
+        help="Path to a text file with one video filename per line to process in batch"
+    )
 
     # If no args were provided, print help and exit
     if len(sys.argv) == 1:

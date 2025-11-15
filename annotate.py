@@ -96,7 +96,8 @@ def load_system_prompt(project_root: str, image_count: int, film: Dict) -> str:
         return ""
     with open(prompt_path, 'r', encoding='utf-8') as f:
         prompt = f.read()
-    prompt = prompt.replace("{title}", film.get('title', 'Unknown'))
+    # try both gameplay/movie keys for robustness
+    prompt = prompt.replace("{title}", film.get('title') or film.get('Title', 'Unknown'))
     prompt = prompt.replace("{year}", film.get('year', 'Unknown'))
     prompt = prompt.replace("{director}", film.get('director', 'Unknown'))
     prompt = prompt.replace("{image-count}", str(image_count))
@@ -149,7 +150,7 @@ def annotate_shot(
     if not start_tc or not end_tc:
         shot['Shot_Caption'] = ""
         return "", 0.0
-    movie_filename = film.get('filename', '')
+    movie_filename = (film.get('filename') or film.get('Filename') or '')
     movie_base = os.path.splitext(movie_filename)[0]
     image_paths = extract_frames_for_shot(video_path, start_tc, end_tc, frames_dir, movie_base, index-1)
     image_count = len(image_paths)
@@ -221,7 +222,10 @@ def annotate_shots(
         start_index: 1-based index of first shot to process
     """
     os.makedirs(frames_dir, exist_ok=True)
-    ndjson_path = os.path.join(frames_dir, f"{os.path.splitext(film.get('filename','unknown'))[0]}.annotations.ndjson")
+    ndjson_path = os.path.join(
+        frames_dir,
+        f"{os.path.splitext((film.get('filename') or film.get('Filename') or 'unknown'))[0]}.annotations.ndjson"
+    )
 
     processed = 0
     total = len(shotlist)

@@ -32,6 +32,22 @@ class MediaLibrary:
             return self.items[index]
         return None
 
+    def find_by_filename(self, name: str) -> Optional[int]:
+        """
+        Find item index by filename (matches full name or basename, case-sensitive).
+        Returns the index or None if not found.
+        """
+        target_base = os.path.splitext(name)[0]
+        for i, item in enumerate(self.items):
+            fname = item.get('Filename') or item.get('filename') or ''
+            if not fname:
+                continue
+            if fname == name:
+                return i
+            if os.path.splitext(fname)[0] == target_base:
+                return i
+        return None
+
     def get_video_path(self, item: Dict) -> str:
         """Get the full path to the video file."""
         filename = item.get('Filename') or item.get('filename', '')
@@ -171,4 +187,4 @@ class Gameplay(MediaLibrary):
 
     def get_title(self, item: Dict) -> str:
         """Get the display title for a gameplay video."""
-        return item.get('title', 'Unknown')
+        return item.get('Title') or item.get('title') or 'Unknown'
