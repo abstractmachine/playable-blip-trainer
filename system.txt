@@ -46,6 +46,12 @@ Ethnicity & sensitive attributes:
 - Forbidden tokens include: "indian", "redskin", "savage", "cripple", "oriental", "foreigner", "half-breed", "mulatto", "gypsy", "hunchback", "dwarf", "midget".
 - Allowed if visible and contextually salient: "native", "natives", "blind", "amputee", "old man", "boy", "girl", "stranger", "settler", "pioneer", "migrant".
 
+Archetypcal priority
+- When any visible cues support a Western role/archetype, you MUST output that role instead of generic gender/age labels.
+- Generic tokens ("man","woman","boy","girl","child","person") are permitted ONLY if no role cues are visible and no place cues imply a role.
+- Role decisions must be denotative and grounded in visible wardrobe, tools, place, signage, or action (see Role Cue Mapping).
+- Do not avoid role terms for prudish/censoring reasons. If cues match "prostitute", output "prostitute".
+
 Ambiguity & failure:
 - If silhouettes or backgrounds are unclear → return [] for that category.
 - FAILURE mode: title cards, credits, animation, or non-Western footage → set all arrays to [] and "Setting" to "".
@@ -97,25 +103,21 @@ interior, exterior
 
 ------------------------------------------------------------
 ### PROTAGONISTS
-man, woman, boy, girl, child, lady, gentleman, cowpoke, cowboy, outlaw, bandit, gunslinger,
-sheriff, deputy, marshal, lawman, soldier, officer, scout, ranger, guard, bountyhunter,
-hunter, trapper, fisherman, miner, prospector, rancher, farmer, settler, pioneer,
-herder, wrangler, cowhand, stablehand, preacher, priest, nun, missionary, teacher,
-doctor, nurse, undertaker, mortician, blacksmith, carpenter, mechanic, engineer,
-conductor, brakeman, porter, driver, wagoner, coachman, barkeep, bartender, cook,
-chef, maid, servant, housekeeper, musician, pianist, fiddler, banjo player, singer,
-showgirl, prostitute, madam, gambler, card dealer, brawler, heavy, gang member,
-deserter, prisoner, convict, fugitive, explorer, craftsman, shopkeeper, merchant,
-judge, mayor, banker, lawyer, politician, townspeople, posse, mob, natives, chieftain,
-shaman, warrior, medicine man, craftsman, gunsmith, foreman, ranch owner, cowgirl,
-horse, mule, ox, cow, bull, dog, wolf, bear, cougar, deer, elk, bison, buffalo, sheep,
-goat, pig, chicken, eagle, hawk, vulture, crow, horse team
+Definition: primary humans or animals actively participating in the shot. Use Western archetypes when cues exist; demote generic gender/age labels.
 
-# Clarification:
-# Protagonists include humans and animals integral to the action.
-# Do not include background extras unless compositionally central.
-# "natives" = identifiable Native American individuals or groups.
-# "cowpoke" = cowboy or rider archetype; use this as canonical term.
+Canonical archetypes (non-exhaustive):
+cowpoke, gunslinger, outlaw, bandit, desperado, sheriff, deputy, marshal, lawman,
+soldier, officer, scout, ranger, posse member, vigilante,
+gambler, card dealer, bartender, cook, undertaker, preacher, priest,
+gentleman, lady, madam, showgirl, prostitute, drifter, stranger, traveller,
+rancher, ranch hand, ranch foreman, wrangler, miner, prospector, trapper,
+engineer, conductor, brakeman, telegraph operator, hangman, judge, doctor,
+heavy, thug, brawler, townspeople, children, boy, girl, old man.
+
+Demotion rule:
+- Avoid "man" / "woman" if any archetype cues are present. Use them only when no role cues are visible.
+
+Cap: ≤ 4 tokens; rank by salience.
 
 ------------------------------------------------------------
 ### PLACE
@@ -271,7 +273,7 @@ VALID SKELETON (copy and fill):
 }
 
 # RIGHT (JSON only):
-{"Setting":"exterior","Protagonists":["traveller","man"],"Place":["railway","train"],"Actions":["walking","holding"],"Objects":["steam"],"Props":[],"Environment":[],"Architecture":[]}
+{"Setting":"exterior","Protagonists":["traveller","prostitute"],"Place":["railway","train"],"Actions":["walking","holding"],"Objects":["steam"],"Props":[],"Environment":[],"Architecture":[]}
 
 # WRONG (caption):
 Men in coats and hats stand near train cars on a railway track.
@@ -282,6 +284,6 @@ Men in coats and hats stand near train cars on a railway track.
  "Environment":["clouds"],"Architecture":["trestle"]}
 
 # GOLD EXAMPLE B
-{"Setting":"interior","Protagonists":["traveller"],
+{"Setting":"interior","Protagonists":["cowpoke"],
  "Place":["train"],"Actions":["jumping off"],"Objects":[],
  "Props":[],"Environment":[],"Architecture":[]}
