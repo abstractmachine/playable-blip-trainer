@@ -86,7 +86,12 @@ def extract_frames_for_shot(video_path: str, start_tc: str, end_tc: str, output_
     return paths
 
 def load_system_prompt(project_root: str, image_count: int, film: Dict) -> str:
-    prompt_path = os.path.join(project_root, "prompts", "system.txt")
+    # use system.txt in code folder if exists
+    prompt_path = os.path.join(os.path.dirname(__file__), "system.txt")
+    # otherwise use project_root prompt
+    if not os.path.exists(prompt_path):
+        prompt_path = os.path.join(project_root, "prompts", "system.txt")
+
     if not os.path.exists(prompt_path):
         return ""
     with open(prompt_path, 'r', encoding='utf-8') as f:
