@@ -51,7 +51,7 @@ Ambiguity & failure:
 - FAILURE mode: title cards, credits, animation, or non-Western footage → set all arrays to [] and "Setting" to "".
 
 ------------------------------------------------------------
-ARACHETYPE PREFERENCE (PROTAGONISTS)
+ARCHETYPE PREFERENCE (PROTAGONISTS)
 ------------------------------------------------------------
 
 - Always choose the most distinctly Western archetype visible in the shot.
