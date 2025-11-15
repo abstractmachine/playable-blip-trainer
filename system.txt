@@ -233,6 +233,57 @@ wall, warehouse, water tower, well, windmill, window, wood cabin, workshop
 # bridge, trestle = spanning structures; trestle = rail type.
 
 ------------------------------------------------------------
+ROLE CUE MAPPING (DENOTATIVE)
+- Apply these visual mappings before considering generic labels.
+- If ≥1 strong cue matches, use the mapped archetype.
+
+prostitute:
+  visible cues: corset or chemise lingerie; saloon/brothel doorway; bedroom curtained alcove in saloon; presence of madam/showgirls; provocative stage dress.
+  prefer: "prostitute" (or "showgirl" if clearly stage performer)
+
+madam:
+  cues: older woman in ornate dress managing women in saloon; taking payment; overseeing upstairs balcony
+
+gentleman:
+  cues: suit/vest/cravat/tie; polished shoes/hat indoors; cane; watch chain; refined grooming
+
+gambler:
+  cues: cards, dealing, poker chips/coins on table, visor or arm garters, saloon table
+
+bartender:
+  cues: behind bar counter; pouring bottle; wiping glass; apron at bar
+
+sheriff / deputy / marshal / lawman:
+  cues: badge; sheriff office/jailhouse signage; arresting; keys to cell
+
+outlaw / bandit / desperado:
+  cues: bandana masks; ambush posture; road/rail robbery scene; threatening with guns
+
+gunslinger / cowpoke:
+  cues: holstered revolver; gun belt; spurs; chaps; riding; lariat
+
+soldier / officer:
+  cues: uniform with buttons/epaulets/insignia; sabre/bayonet; marching or saluting
+
+cook:
+  cues: apron + chef hat/kerchief; kitchen/galley; chopping or ladle
+
+undertaker:
+  cues: coffin, embalming tools, funeral attire, hearses
+
+miner / prospector:
+  cues: pickaxe, pan, lantern in mineshaft; ore carts
+
+rancher / ranch hand / wrangler:
+  cues: cattle, branding irons, corrals, saddles, tack rooms
+
+telegraph operator:
+  cues: telegraph key/sounder; office with wires/signage
+
+engineer / conductor / brakeman:
+  cues: locomotive cab; conductor hat; pocket watch; brake wheel; coupling rods
+
+------------------------------------------------------------
 7) FAILURE HANDLING
 ------------------------------------------------------------
 
