@@ -50,15 +50,11 @@ def load_annotation_schema(project_root: str) -> dict:
 
 def load_system_prompt(project_root: str, image_count: int, film: Dict) -> str:
     """
-    Load system.txt from repo (fallback to project_root/prompts/system.txt), then minify.
+    Load system prompt from the local repository's system.txt only.
     """
     prompt_path = os.path.join(os.path.dirname(__file__), "system.txt")
     if not os.path.exists(prompt_path):
-        prompt_path = os.path.join(project_root, "prompts", "system.txt")
-
-    if not os.path.exists(prompt_path):
         return ""
-
     with open(prompt_path, 'r', encoding='utf-8') as f:
         prompt = f.read()
 
@@ -66,8 +62,7 @@ def load_system_prompt(project_root: str, image_count: int, film: Dict) -> str:
     prompt = prompt.replace("{year}", str(film.get('year', 'Unknown')))
     prompt = prompt.replace("{director}", film.get('director', 'Unknown'))
     prompt = prompt.replace("{image-count}", str(image_count))
-
-    return _minify_system_text(prompt)
+    return prompt
 
 def has_scenes(shotlist: List[Dict]) -> bool:
     for shot in shotlist:
