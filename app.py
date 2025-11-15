@@ -20,7 +20,7 @@ def main():
     print(f"Loaded {library}")
 
     # Initialize Ollama once (used if/when annotating)
-    ollama = OllamaClient(model=args.model)
+    ollama = OllamaClient(model=args.model, num_ctx=args.num_ctx)
 
     def process_item(index: int):
         item = library.get(index)

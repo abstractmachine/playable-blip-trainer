@@ -1,12 +1,25 @@
 import os
-import cv2
-import json
-import time
 from datetime import datetime
 from typing import List, Dict, Optional
 from ollama import OllamaClient
 
 _schema_cache: Optional[dict] = None
+
+def _minify_system_text(text: str) -> str:
+    """
+    Trim comments and blanks to reduce prompt size.
+    - Drops lines starting with '#' or '//' or '---' separators.
+    - Collapses extra whitespace.
+    """
+    kept = []
+    for ln in text.splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        if s.startswith("#") or s.startswith("//") or set(s) <= {"-", "—"}:
+            continue
+        kept.append(s)
+    return "\n".join(kept)
 
 def load_annotation_schema(project_root: str) -> dict:
     """
@@ -30,6 +43,27 @@ def load_annotation_schema(project_root: str) -> dict:
 
     tried = "\n  - ".join(os.path.abspath(p) for p in candidates)
     raise FileNotFoundError(f"Schema file not found. Tried:\n  - {tried}")
+
+def load_system_prompt(project_root: str, image_count: int, film: Dict) -> str:
+    """
+    Load system.txt from repo (fallback to project_root/prompts/system.txt), then minify.
+    """
+    prompt_path = os.path.join(os.path.dirname(__file__), "system.txt")
+    if not os.path.exists(prompt_path):
+        prompt_path = os.path.join(project_root, "prompts", "system.txt")
+
+    if not os.path.exists(prompt_path):
+        return ""
+
+    with open(prompt_path, 'r', encoding='utf-8') as f:
+        prompt = f.read()
+
+    prompt = prompt.replace("{title}", film.get('title') or film.get('Title', 'Unknown'))
+    prompt = prompt.replace("{year}", str(film.get('year', 'Unknown')))
+    prompt = prompt.replace("{director}", film.get('director', 'Unknown'))
+    prompt = prompt.replace("{image-count}", str(image_count))
+
+    return _minify_system_text(prompt)
 
 def has_scenes(shotlist: List[Dict]) -> bool:
     for shot in shotlist:
@@ -84,24 +118,6 @@ def extract_frames_for_shot(video_path: str, start_tc: str, end_tc: str, output_
                 # no noisy prints
                 paths.append(img_path)
     return paths
-
-def load_system_prompt(project_root: str, image_count: int, film: Dict) -> str:
-    # use system.txt in code folder if exists
-    prompt_path = os.path.join(os.path.dirname(__file__), "system.txt")
-    # otherwise use project_root prompt
-    if not os.path.exists(prompt_path):
-        prompt_path = os.path.join(project_root, "prompts", "system.txt")
-
-    if not os.path.exists(prompt_path):
-        return ""
-    with open(prompt_path, 'r', encoding='utf-8') as f:
-        prompt = f.read()
-    # try both gameplay/movie keys for robustness
-    prompt = prompt.replace("{title}", film.get('title') or film.get('Title', 'Unknown'))
-    prompt = prompt.replace("{year}", film.get('year', 'Unknown'))
-    prompt = prompt.replace("{director}", film.get('director', 'Unknown'))
-    prompt = prompt.replace("{image-count}", str(image_count))
-    return prompt
 
 def _ensure_list_fields(obj: dict) -> dict:
     out = {"Protagonists": [], "Place": [], "Actions": [], "Objects": []}

@@ -2,6 +2,7 @@ import requests
 import json
 import base64
 from typing import Optional, Dict, Any, List
+import os
 
 # use the `gemma3:27b` model by default
 
@@ -9,38 +10,43 @@ class OllamaClient:
     """
     Simple client to interact with local Ollama instance (vision + JSON).
     """
-    def __init__(self, base_url: str = "http://localhost:11434", model: str = "gemma3:27b"):
-        self.base_url = base_url
+    def __init__(self, base_url: str = "http://localhost:11434", model: str = "gemma3:27b", num_ctx: Optional[int] = None):
+        self.base_url = base_url.rstrip("/")
         self.model = model
-    
-    def generate(self, prompt: str, stream: bool = False) -> Optional[str]:
-        url = f"{self.base_url}/api/generate"
-        payload = {
+        self.num_ctx = num_ctx or int(os.getenv("OLLAMA_NUM_CTX", "8192"))
+        self.session = requests.Session()
+
+    def test_connection(self) -> bool:
+        try:
+            r = self.session.get(f"{self.base_url}/api/tags", timeout=3)
+            return r.ok
+        except Exception:
+            return False
+
+    def generate(self, prompt: str, system: str = "", stream: bool = False) -> Optional[str]:
+        """
+        Use /api/generate with JSON output and enlarged context window.
+        """
+        payload: Dict[str, Any] = {
             "model": self.model,
             "prompt": prompt,
-            "stream": stream
+            "system": system,
+            "format": "json",
+            "options": {
+                "num_ctx": self.num_ctx
+            },
+            "stream": stream,
         }
         try:
-            response = requests.post(url, json=payload)
-            response.raise_for_status()
-            if stream:
-                full_response = ""
-                for line in response.iter_lines():
-                    if line:
-                        data = json.loads(line)
-                        if 'response' in data:
-                            full_response += data['response']
-                return full_response
-            else:
-                data = response.json()
-                return data.get('response', '')
-        except requests.exceptions.RequestException as e:
-            print(f"Error connecting to Ollama: {e}")
+            r = self.session.post(f"{self.base_url}/api/generate", json=payload, timeout=None)
+            r.raise_for_status()
+            data = r.json()
+            # When stream=false, Ollama returns a single JSON with 'response'
+            return data.get("response")
+        except Exception as e:
+            print(f"Ollama error: {e}")
             return None
-        except json.JSONDecodeError as e:
-            print(f"Error parsing Ollama response: {e}")
-            return None
-    
+
     def generate_with_images(
         self,
         prompt: str,
@@ -97,14 +103,6 @@ class OllamaClient:
         except json.JSONDecodeError as e:
             print(f"Error parsing Ollama response: {e}")
             return None
-    
-    def test_connection(self) -> bool:
-        try:
-            response = self.generate("Hi")
-            return response is not None
-        except Exception as e:
-            print(f"Connection test failed: {e}")
-            return False
     
     @staticmethod
     def _extract_json(text: str) -> Optional[str]:

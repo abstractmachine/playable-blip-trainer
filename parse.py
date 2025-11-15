@@ -10,7 +10,7 @@ def parse_arguments():
         "--project-root",
         #default="/Volumes/abstract-2T/project/",
         #default="/Volumes/PLAYABLE-D/project/", # macOS
-        #default="/media/pool/PLAYABLE-D/project/", # Ubuntu
+        default="/media/pool/PLAYABLE-D/project/", # Ubuntu
         help="Root directory for the project"
     )
     parser.add_argument(
@@ -59,6 +59,12 @@ def parse_arguments():
         type=str,
         default=None,
         help="Path to a text file with one video filename per line to process in batch"
+    )
+    parser.add_argument(
+        "--num-ctx",
+        type=int,
+        default=8192,
+        help="Ollama context window (tokens). Try 8192 or 16384 if supported."
     )
 
     # If no args were provided, print help and exit
