@@ -6,84 +6,32 @@ def parse_arguments():
     Parse command line arguments.
     """
     parser = argparse.ArgumentParser(description="BLIP trainer/annotation tool")
+
+    # Project root (supports both --project-root and --project_root)
     parser.add_argument(
-<<<<<<< HEAD
-        "--project-root",
-        #default="/Volumes/abstract-2T/project/",
-        #default="/Volumes/PLAYABLE-D/project/", # macOS
-        default="/media/pool/PLAYABLE-D/project/", # Ubuntu
+        "--project-root", "--project_root",
+        dest="project_root",
+        default="/Volumes/abstract-2T/project/",
         help="Root directory for the project"
-=======
-        "--project-root", "--project_root",        dest="project_root",
-        default="/Volumes/abstract-2T/project/",        help="Root directory for the project"
->>>>>>> 2add72f
-    )
-    parser.add_argument(
-        "--index",
-        type=int,
-        default=-1,
-        help="Film index from cinematheque.csv or gameplay.csv (-1 = none)"
-    )
-    parser.add_argument(
-        "--action",
-        choices=['erase', 'annotate'],
-        help="Action to perform on the selected item"
-    )
-    parser.add_argument(
-        "--type",
-        choices=['scene', 'shot'],
-        default='shot',
-        help="Type of caption to operate on (default: shot)"
-    )
-    parser.add_argument(
-        "--media",
-        choices=['movie', 'gameplay'],
-        default='movie',
-        help="Media type to work with (default: movie)"
-    )
-    # New options
-    parser.add_argument(
-        "--model",
-        default="gemma3:27b",
-        help="Ollama model to use (default: gemma3:27b)"
-    )
-    parser.add_argument(
-        "--shot_index",
-        type=int,
-        default=1,
-        help="Starting shot index (1-based) for annotation"
-    )
-    parser.add_argument(
-        "--annotation_count",
-        type=int,
-        default=None,
-        help="How many shots to annotate (default: until end)"
-    )
-    parser.add_argument(
-<<<<<<< HEAD
-        "--filelist",
-        type=str,
-        default=None,
-        help="Path to a text file with one video filename per line to process in batch"
-    )
-    parser.add_argument(
-        "--num-ctx",
-        type=int,
-        default=8192,
-        help="Ollama context window (tokens). Try 8192 or 16384 if supported."
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Print detailed per-shot timing, progress, and ETA"
-=======
-        "--verbose",
-        action="store_true",
-        help="Enable verbose logging"
->>>>>>> 2add72f
     )
 
-    # If no args were provided, print help and exit
+    # Core selection
+    parser.add_argument("--index", type=int, default=-1, help="Item index from metadata CSV")
+    parser.add_argument("--action", choices=["annotate", "erase"], help="Action to perform")
+    parser.add_argument("--type", choices=["shot", "scene"], default="shot", help="Annotation type (default: shot)")
+    parser.add_argument("--media", choices=["movie", "gameplay"], default="movie", help="Media library (default: movie)")
+
+    # Annotation controls
+    parser.add_argument("--shot_index", type=int, default=1, help="Starting shot index (1-based)")
+    parser.add_argument("--annotation_count", type=int, default=None, help="Number of shots to annotate (default: all)")
+    parser.add_argument("--filelist", type=str, default=None, help="Text file with one video filename per line")
+
+    # Model/runtime
+    parser.add_argument("--model", type=str, default="gemma3:27b", help="Ollama model name")
+    parser.add_argument("--num-ctx", type=int, default=8192, help="Ollama context window")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+
+    # Show help if no args
     if len(sys.argv) == 1:
         parser.print_help()
         parser.exit()
