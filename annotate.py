@@ -164,9 +164,13 @@ def extract_frames_for_shot(video_path: str, start_tc: str, end_tc: str, output_
     samples = 4
     times = [t0 + duration * (i + 1) / (samples + 1) for i in range(samples)]
     out_paths: List[str] = []
-    shot_dir = os.path.join(output_dir, movie_base, f"shot_{shot_index:04d}")
+    
+    # Flat structure: frames/<movie_base>/shot_XXXX_frame_YY.jpg
+    film_dir = os.path.join(output_dir, movie_base)
+    os.makedirs(film_dir, exist_ok=True)
+    
     for idx, ts in enumerate(times, start=1):
-        out = os.path.join(shot_dir, f"frame_{idx:02d}.jpg")
+        out = os.path.join(film_dir, f"shot_{shot_index:04d}_frame_{idx:02d}.jpg")
         if extract_frame_at_time(video_path, ts, out):
             out_paths.append(out)
     return out_paths
