@@ -126,7 +126,8 @@ def annotate_shot(
     frames_dir: str,
     project_root: str,
     print_prompt: bool = False,
-    ndjson_path: Optional[str] = None
+    ndjson_path: Optional[str] = None,
+    verbose: bool = False
 ) -> tuple[str, float]:
     """
     Annotate a single shot with Shot_Caption.
@@ -135,31 +136,43 @@ def annotate_shot(
         tuple[str, float]: (caption, duration_seconds)
     """
     start_time = time.time()
+    perf_start = time.perf_counter()
     
     if shot.get('Ignore', '').strip().lower() == 'yes':
         shot['Shot_Caption'] = ""
         return "", 0.0
+
     start_tc = shot.get('Start', '')
     end_tc = shot.get('End', '')
     if not start_tc or not end_tc:
         shot['Shot_Caption'] = ""
         return "", 0.0
+
+    # Frame extraction timing
+    t_extract0 = time.perf_counter()
     movie_filename = film.get('filename', '')
     movie_base = os.path.splitext(movie_filename)[0]
     image_paths = extract_frames_for_shot(video_path, start_tc, end_tc, frames_dir, movie_base, index-1)
+    extract_s = time.perf_counter() - t_extract0
+
     image_count = len(image_paths)
     if image_count == 0:
         shot['Shot_Caption'] = ""
-        return "", 0.0
+        duration = time.time() - start_time
+        if verbose:
+            print(f"    details: frames=0 | extract {extract_s:.2f}s | model 0.00s | parse 0.00s")
+        return "", duration
+
     system_text = load_system_prompt(project_root, image_count, film)
-    # Do not print the system prompt anymore
-    # if print_prompt:  # removed
-    #     ...
+
     user_prompt = (
         "Respond ONLY with a JSON object that matches the provided schema. "
         "Do not include prose, markdown, code fences, keys outside the schema, or comments."
     )
     schema = load_annotation_schema(project_root)
+
+    # Model timing
+    t_model0 = time.perf_counter()
     response = ollama.generate_with_images(
         prompt=user_prompt,
         image_paths=image_paths,
@@ -167,14 +180,24 @@ def annotate_shot(
         system=system_text,
         schema=schema
     )
+    model_s = time.perf_counter() - t_model0
+
+    # Parse timing
+    parse_s = 0.0
     if response is None:
         shot['Shot_Caption'] = ""
         duration = time.time() - start_time
+        if verbose:
+            print(f"    details: frames={image_count} | extract {extract_s:.2f}s | model {model_s:.2f}s | parse 0.00s")
         return "", duration
+
     try:
+        t_parse0 = time.perf_counter()
         data = json.loads(response)
         data = _ensure_list_fields(data)
         shot['Shot_Caption'] = _minify(data)
+        parse_s = time.perf_counter() - t_parse0
+
         if ndjson_path:
             audit = {
                 "ts": datetime.utcnow().isoformat() + "Z",
@@ -196,6 +219,8 @@ def annotate_shot(
         shot['Shot_Caption'] = ""
     
     duration = time.time() - start_time
+    if verbose:
+        print(f"    details: frames={image_count} | extract {extract_s:.2f}s | model {model_s:.2f}s | parse {parse_s:.2f}s")
     return shot['Shot_Caption'], duration
 
 def annotate_shots(
@@ -206,7 +231,8 @@ def annotate_shots(
     frames_dir: str,
     project_root: str,
     limit: Optional[int] = None,
-    start_index: int = 1
+    start_index: int = 1,
+    verbose: bool = False
 ) -> List[Dict]:
     """
     Annotate each shot with Shot_Caption.
@@ -214,22 +240,27 @@ def annotate_shots(
     Args:
         limit: number of shots to process (None = until end)
         start_index: 1-based index of first shot to process
+        verbose: print detailed per-shot timing and ETA
     """
     os.makedirs(frames_dir, exist_ok=True)
     ndjson_path = os.path.join(frames_dir, f"{os.path.splitext(film.get('filename','unknown'))[0]}.annotations.ndjson")
 
     processed = 0
     total = len(shotlist)
+    # Planned shots (rough estimate, ignores 'Ignore' rows)
+    plan = max(0, total - (start_index - 1))
+    if limit is not None:
+        plan = min(plan, limit)
+
     total_start_time = time.time()
+    sum_duration = 0.0
     
     for i, shot in enumerate(shotlist, start=1):
-        # Skip shots before the requested starting index
         if i < max(1, start_index):
             continue
         if limit is not None and processed >= limit:
             break
 
-        # Skip ignored shots but do not count toward limit
         if shot.get('Ignore', '').strip().lower() == 'yes':
             shot['Shot_Caption'] = ""
             continue
@@ -237,13 +268,22 @@ def annotate_shots(
         print(f"Processing shot {i}/{total}...")
         caption, duration = annotate_shot(
             shot, i, video_path, film, ollama, frames_dir, project_root,
-            print_prompt=False, ndjson_path=ndjson_path
+            print_prompt=False, ndjson_path=ndjson_path, verbose=verbose
         )
         if caption is not None:
             shot['Shot_Caption'] = caption
         
-        print(f"  ✓ Completed in {duration:.2f}s")
         processed += 1
+        sum_duration += duration
+        avg = (sum_duration / processed) if processed else 0.0
+        remaining = max(0, plan - processed)
+        eta_sec = remaining * avg
+        mm, ss = divmod(int(eta_sec), 60)
+        pct = (processed / plan * 100.0) if plan else 100.0
+
+        print(f"  ✓ Completed in {duration:.2f}s")
+        if verbose:
+            print(f"    progress: {processed}/{plan} ({pct:.1f}%) | avg {avg:.2f}s | ETA {mm:02d}:{ss:02d}")
 
     total_duration = time.time() - total_start_time
     

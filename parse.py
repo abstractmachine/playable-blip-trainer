@@ -7,10 +7,8 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(description="BLIP trainer/annotation tool")
     parser.add_argument(
-        "--project-root",
-        #default="/Volumes/PLAYABLE-D/project/", # macOS
-        default="/media/pool/PLAYABLE-D/project/", # Ubuntu
-        help="Root directory for the project"
+        "--project-root", "--project_root",        dest="project_root",
+        default="/Volumes/abstract-2T/project/",        help="Root directory for the project"
     )
     parser.add_argument(
         "--index",
@@ -52,6 +50,11 @@ def parse_arguments():
         type=int,
         default=None,
         help="How many shots to annotate (default: until end)"
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging"
     )
 
     # If no args were provided, print help and exit
