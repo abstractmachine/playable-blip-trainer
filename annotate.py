@@ -4,16 +4,63 @@ import time
 from datetime import datetime
 from typing import List, Dict, Optional
 import cv2
+from jsonschema import validate, ValidationError
 
 from ollama import OllamaClient
 
 _schema_cache: Optional[dict] = None
 
+# Hard schema for validation (matches annotation.schema.json structure)
+VALIDATION_SCHEMA = {
+    "type": "object",
+    "required": ["Setting", "Protagonists", "Place", "Actions", "Objects", "Props", "Environment", "Architecture"],
+    "properties": {
+        "Setting": {"type": "string"},
+        "Protagonists": {"type": "array", "items": {"type": "string"}},
+        "Place": {"type": "array", "items": {"type": "string"}},
+        "Actions": {"type": "array", "items": {"type": "string"}},
+        "Objects": {"type": "array", "items": {"type": "string"}},
+        "Props": {"type": "array", "items": {"type": "string"}},
+        "Environment": {"type": "array", "items": {"type": "string"}},
+        "Architecture": {"type": "array", "items": {"type": "string"}}
+    },
+    "additionalProperties": False
+}
+
+def _extract_and_validate_json(text: str, max_tries: int = 1) -> Optional[dict]:
+    """
+    Extract first {...} from text, validate against schema.
+    Returns dict or None.
+    """
+    if not text:
+        return None
+    
+    # Try raw parse first
+    try:
+        data = json.loads(text.strip())
+        validate(instance=data, schema=VALIDATION_SCHEMA)
+        return data
+    except Exception:
+        pass
+    
+    # Extract first {...}
+    start = text.find('{')
+    end = text.rfind('}')
+    if start == -1 or end == -1 or end <= start:
+        return None
+    
+    candidate = text[start:end+1]
+    try:
+        data = json.loads(candidate)
+        validate(instance=data, schema=VALIDATION_SCHEMA)
+        return data
+    except (json.JSONDecodeError, ValidationError) as e:
+        print(f"[warn] JSON extraction/validation failed: {e}")
+        return None
+
 def _minify_system_text(text: str) -> str:
     """
     Trim comments and blanks to reduce prompt size.
-    - Drops lines starting with '#' or '---' separators.
-    - Collapses extra whitespace.
     """
     kept = []
     for ln in text.splitlines():
@@ -124,26 +171,6 @@ def extract_frames_for_shot(video_path: str, start_tc: str, end_tc: str, output_
             out_paths.append(out)
     return out_paths
 
-def _ensure_list_fields(obj: dict) -> dict:
-    out = {"Protagonists": [], "Place": [], "Actions": [], "Objects": []}
-    for k in out.keys():
-        v = obj.get(k, [])
-        if v is None:
-            v = []
-        if isinstance(v, str):
-            v = [v] if v.strip() else []
-        elif isinstance(v, (int, float, bool)):
-            v = [str(v)]
-        elif isinstance(v, list):
-            v = [str(x) for x in v if x is not None and str(x).strip()]
-        else:
-            v = []
-        out[k] = v
-    return out
-
-def _minify(d: dict) -> str:
-    return json.dumps(d, separators=(",", ":"), ensure_ascii=False)
-
 def annotate_shot(
     shot: Dict,
     index: int,
@@ -177,34 +204,66 @@ def annotate_shot(
         return "", dur
 
     system_text = load_system_prompt(project_root, len(image_paths), film)
-    user_prompt = 'Return a concise JSON object: {"caption": "<one sentence visual description>"}'
+    schema = load_annotation_schema(project_root)
+    
+    # Strict user prompt (reinforces JSON-only output)
+    user_prompt = (
+        "Output EXACTLY ONE JSON object matching the schema. "
+        "Start with '{' and end with '}'. "
+        "No explanations, no markdown, no code fences."
+    )
 
-    # Model call
+    # Retry loop with stricter prompts
+    MAX_RETRIES = 2
+    data = None
     t_model0 = time.perf_counter()
-    try:
-        if hasattr(ollama, "generate_with_images"):
-            resp = ollama.generate_with_images(prompt=user_prompt, image_paths=image_paths, system=system_text, stream=False)
-        else:
-            resp = ollama.generate(prompt=user_prompt, system=system_text, stream=False)  # fallback
-    except Exception as e:
-        print(f"[warn] Ollama call failed for shot {index}: {e}")
-        resp = None
-    model_s = time.perf_counter() - t_model0
-
-    # Parse response
-    caption = ""
-    t_parse0 = time.perf_counter()
-    if resp:
+    
+    for attempt in range(MAX_RETRIES):
         try:
-            data = json.loads(resp)
-            caption = data.get("caption") or resp.strip()
-        except Exception:
-            caption = resp.strip()
-    parse_s = time.perf_counter() - t_parse0 if resp else 0.0
-
+            resp = ollama.generate_with_images(
+                prompt=user_prompt,
+                image_paths=image_paths,
+                system=system_text,
+                schema=schema,
+                stream=False
+            )
+            model_s = time.perf_counter() - t_model0
+            
+            if not resp:
+                if verbose:
+                    print(f"    [attempt {attempt+1}/{MAX_RETRIES}] No response from model")
+                continue
+            
+            # Extract and validate
+            t_parse0 = time.perf_counter()
+            data = _extract_and_validate_json(resp)
+            parse_s = time.perf_counter() - t_parse0
+            
+            if data:
+                break  # Success
+            else:
+                if verbose:
+                    print(f"    [attempt {attempt+1}/{MAX_RETRIES}] Invalid JSON, retrying...")
+                # Tighten prompt for next attempt
+                user_prompt = "CRITICAL: Return ONLY valid JSON. Begin with '{', end with '}'. No text before or after."
+        except Exception as e:
+            if verbose:
+                print(f"    [attempt {attempt+1}/{MAX_RETRIES}] Error: {e}")
+            continue
+    
+    model_s = time.perf_counter() - t_model0
+    
+    # Finalize
+    caption = ""
+    if data:
+        caption = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+    else:
+        print(f"[ERROR] Shot {index}: Failed to get valid JSON after {MAX_RETRIES} attempts")
+    
     dur = time.perf_counter() - t0
     if verbose:
-        print(f"    details: frames={len(image_paths)} | extract {extract_s:.2f}s | model {model_s:.2f}s | parse {parse_s:.2f}s")
+        print(f"    details: frames={len(image_paths)} | extract {extract_s:.2f}s | model {model_s:.2f}s | valid={'YES' if data else 'NO'}")
+    
     return caption, dur
 
 def annotate_shots(

@@ -4,8 +4,6 @@ import base64
 from typing import Optional, Dict, Any, List
 import os
 
-# use the `gemma3:27b` model by default
-
 class OllamaClient:
     """
     Simple client to interact with local Ollama instance (vision + JSON).
@@ -33,7 +31,8 @@ class OllamaClient:
             "system": system,
             "format": "json",
             "options": {
-                "num_ctx": self.num_ctx
+                "num_ctx": self.num_ctx,
+                "temperature": 0.0  # Deterministic output
             },
             "stream": stream,
         }
@@ -41,7 +40,6 @@ class OllamaClient:
             r = self.session.post(f"{self.base_url}/api/generate", json=payload, timeout=None)
             r.raise_for_status()
             data = r.json()
-            # When stream=false, Ollama returns a single JSON with 'response'
             return data.get("response")
         except Exception as e:
             print(f"Ollama error: {e}")
@@ -57,6 +55,7 @@ class OllamaClient:
     ) -> Optional[str]:
         """
         Send a prompt with images; optional system prompt + JSON schema.
+        Enforces format="json" and temperature=0.
         """
         url = f"{self.base_url}/api/generate"
         images = []
@@ -68,24 +67,30 @@ class OllamaClient:
             except Exception as e:
                 print(f"Error reading image {image_path}: {e}")
                 continue
+        
         if not images:
             print("No images could be loaded")
             return None
-        payload = {
+        
+        payload: Dict[str, Any] = {
             "model": self.model,
             "prompt": prompt,
             "stream": stream,
             "images": images,
+            "format": schema if schema else "json",  # Use schema or fallback to "json"
+            "options": {
+                "num_ctx": self.num_ctx,
+                "temperature": 0.0  # Force deterministic output
+            }
         }
+        
         if system:
             payload["system"] = system
-        if schema is not None:
-            payload["format"] = schema
-        else:
-            payload["format"] = "json"
+        
         try:
-            response = requests.post(url, json=payload)
+            response = self.session.post(url, json=payload, timeout=None)
             response.raise_for_status()
+            
             if stream:
                 full_response = ""
                 for line in response.iter_lines():
@@ -93,33 +98,14 @@ class OllamaClient:
                         data = json.loads(line)
                         if 'response' in data:
                             full_response += data['response']
-                return self._extract_json(full_response)
+                return full_response
             else:
                 data = response.json()
-                return self._extract_json(data.get('response', ''))
+                return data.get('response', '')
+        
         except requests.exceptions.RequestException as e:
             print(f"Error connecting to Ollama: {e}")
             return None
         except json.JSONDecodeError as e:
             print(f"Error parsing Ollama response: {e}")
             return None
-    
-    @staticmethod
-    def _extract_json(text: str) -> Optional[str]:
-        if not text:
-            return None
-        try:
-            json.loads(text)
-            return text.strip()
-        except Exception:
-            pass
-        start = text.find('{')
-        end = text.rfind('}')
-        if start != -1 and end != -1 and end > start:
-            candidate = text[start:end+1]
-            try:
-                json.loads(candidate)
-                return candidate
-            except Exception:
-                return None
-        return None
