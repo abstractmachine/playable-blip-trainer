@@ -2,13 +2,14 @@ import os
 from datetime import datetime
 from typing import List, Dict, Optional
 from ollama import OllamaClient
+import time  # fix: needed for timing
 
 _schema_cache: Optional[dict] = None
 
 def _minify_system_text(text: str) -> str:
     """
     Trim comments and blanks to reduce prompt size.
-    - Drops lines starting with '#' or '//' or '---' separators.
+    - Drops lines starting with '#' or '---' separators.
     - Collapses extra whitespace.
     """
     kept = []
@@ -16,7 +17,7 @@ def _minify_system_text(text: str) -> str:
         s = ln.strip()
         if not s:
             continue
-        if s.startswith("#") or s.startswith("//") or set(s) <= {"-", "—"}:
+        if s.startswith("#") or set(s) <= {"-", "—"}:
             continue
         kept.append(s)
     return "\n".join(kept)
