@@ -29,6 +29,7 @@ def parse_arguments():
     # Model/runtime
     parser.add_argument("--model", type=str, default="gemma3:27b", help="Ollama model name")
     parser.add_argument("--num-ctx", type=int, default=8192, help="Ollama context window")
+    parser.add_argument("--temperature", type=float, default=0.3, help="Model temperature (0.0-1.0, default 0.3)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     # Show help if no args

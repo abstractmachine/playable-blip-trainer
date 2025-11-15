@@ -19,7 +19,7 @@ def main():
 
     print(f"Loaded {library}")
 
-    ollama = OllamaClient(model=args.model, num_ctx=args.num_ctx)
+    ollama = OllamaClient(model=args.model, num_ctx=args.num_ctx, temperature=args.temperature)
 
     def process_index(idx: int):
         item = library.get(idx)

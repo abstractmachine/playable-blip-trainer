@@ -8,10 +8,11 @@ class OllamaClient:
     """
     Simple client to interact with local Ollama instance (vision + JSON).
     """
-    def __init__(self, base_url: str = "http://localhost:11434", model: str = "gemma3:27b", num_ctx: Optional[int] = None):
+    def __init__(self, base_url: str = "http://localhost:11434", model: str = "gemma3:27b", num_ctx: Optional[int] = None, temperature: float = 0.3):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.num_ctx = num_ctx or int(os.getenv("OLLAMA_NUM_CTX", "8192"))
+        self.temperature = temperature  # Default 0.3 for varied but controlled output
         self.session = requests.Session()
 
     def test_connection(self) -> bool:
@@ -32,7 +33,7 @@ class OllamaClient:
             "format": "json",
             "options": {
                 "num_ctx": self.num_ctx,
-                "temperature": 0.0  # Deterministic output
+                "temperature": self.temperature
             },
             "stream": stream,
         }
@@ -55,7 +56,7 @@ class OllamaClient:
     ) -> Optional[str]:
         """
         Send a prompt with images; optional system prompt + JSON schema.
-        Enforces format="json" and temperature=0.
+        Enforces format="json" with configurable temperature.
         """
         url = f"{self.base_url}/api/generate"
         images = []
@@ -77,10 +78,10 @@ class OllamaClient:
             "prompt": prompt,
             "stream": stream,
             "images": images,
-            "format": schema if schema else "json",  # Use schema or fallback to "json"
+            "format": schema if schema else "json",
             "options": {
                 "num_ctx": self.num_ctx,
-                "temperature": 0.0  # Force deterministic output
+                "temperature": self.temperature  # Use configurable temperature
             }
         }
         
