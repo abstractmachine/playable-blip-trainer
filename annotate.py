@@ -216,7 +216,8 @@ def annotate_shots(
     project_root: str,
     limit: Optional[int] = None,
     start_index: int = 1,
-    verbose: bool = False
+    verbose: bool = False,
+    save_callback=None  # New: called after each shot to save progress
 ) -> List[Dict]:
     os.makedirs(frames_dir, exist_ok=True)
     total = len(shotlist)
@@ -241,6 +242,10 @@ def annotate_shots(
         print(f"Processing shot {processed+1}/{plan} (index {i} of {total})...")
         caption, dur = annotate_shot(shot, i, video_path, film, ollama, frames_dir, project_root, verbose=verbose)
         shot['Shot_Caption'] = caption
+
+        # Save progress after each shot
+        if save_callback:
+            save_callback(shotlist)
 
         processed += 1
         sum_dur += dur
