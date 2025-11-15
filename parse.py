@@ -8,8 +8,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="BLIP trainer/annotation tool")
     parser.add_argument(
         "--project-root",
+        #default="/Volumes/abstract-2T/project/",
         #default="/Volumes/PLAYABLE-D/project/", # macOS
-        default="/media/pool/PLAYABLE-D/project/", # Ubuntu
+        #default="/media/pool/PLAYABLE-D/project/", # Ubuntu
         help="Root directory for the project"
     )
     parser.add_argument(
