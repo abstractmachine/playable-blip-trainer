@@ -69,7 +69,8 @@ def main():
                     frames_dir=frames_dir,
                     project_root=args.project_root,
                     limit=args.annotation_count,
-                    start_index=args.shot_index
+                    start_index=args.shot_index,
+                    verbose=args.verbose
                 )
                 if library.save_shotlist(item, out_shotlist):
                     print("\n✓ Shot captions annotated successfully")

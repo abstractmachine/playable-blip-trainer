@@ -66,6 +66,11 @@ def parse_arguments():
         default=8192,
         help="Ollama context window (tokens). Try 8192 or 16384 if supported."
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print detailed per-shot timing, progress, and ETA"
+    )
 
     # If no args were provided, print help and exit
     if len(sys.argv) == 1:
