@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from ollama import OllamaClient
 import time  # fix: needed for timing
+import json  # fix: used for load/dumps
+import cv2   # fix: used for frame extraction
 
 _schema_cache: Optional[dict] = None
 
