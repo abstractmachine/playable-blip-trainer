@@ -284,6 +284,18 @@ engineer / conductor / brakeman:
   cues: locomotive cab; conductor hat; pocket watch; brake wheel; coupling rods
 
 ------------------------------------------------------------
+PLURAL AGGREGATION RULE
+------------------------------------------------------------
+
+- When multiple similar figures of the same archetype appear in a shot (e.g., three gamblers, two soldiers, several cowpokes), output the archetype in its plural form ("gamblers","soldiers","cowpokes") ONCE instead of repeating the singular token.
+- Do NOT output duplicate singulars; aggregation replaces repetition.
+- Keep pluralization consistent across all fields:
+  - Singular = one visible instance (e.g., "prostitute")
+  - Plural = multiple visible instances of the same type (e.g., "prostitutes")
+- When uncertain if pluralization is justified, default to singular.
+- This rule applies to all categories (Protagonists, Place, Actions, Objects, Props, Environment, Architecture) where plurality is visually observable.
+
+------------------------------------------------------------
 7) FAILURE HANDLING
 ------------------------------------------------------------
 
