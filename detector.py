@@ -15,10 +15,17 @@ def _ensure(video_path: str):
     if not os.path.exists(video_path):
         raise FileNotFoundError(video_path)
     if VideoManager is None:
-        raise RuntimeError("scenedetect not installed. pip install scenedetect")
+        raise RuntimeError("scenedetect not installed (pip install scenedetect)")
 
 def _format_tc(ftc: FrameTimecode) -> str:
     return ftc.get_timecode()  # HH:MM:SS.mmm
+
+def _parse_window_time(t: Optional[str], base: FrameTimecode) -> Optional[FrameTimecode]:
+    if not t:
+        return None
+    if ":" in t:
+        return FrameTimecode(timecode=t, fps=base.framerate)
+    return FrameTimecode(timecode=float(t), fps=base.framerate)
 
 def detect_shots(
     video_path: str,
@@ -32,16 +39,14 @@ def detect_shots(
     verbose: bool = False
 ) -> List[Dict]:
     """
-    Returns list of shot dicts: Start/End + empty caption fields.
+    AdaptiveDetector (PySceneDetect 0.6.x) does NOT support downscale_factor or luma_only.
+    ContentDetector supports: threshold, min_scene_len, luma_only, downscale_factor, kernel_size.
     """
     _ensure(video_path)
     vm = VideoManager([video_path])
-    base_tc = None
-
     vm.start()
     try:
         base_tc = vm.get_base_timecode()
-        # Optional window
         start_tc = _parse_window_time(start, base_tc) if start else None
         end_tc = _parse_window_time(end, base_tc) if end else None
         if start_tc or end_tc:
@@ -53,8 +58,8 @@ def detect_shots(
         if method == "adaptive":
             det = AdaptiveDetector(
                 adaptive_threshold=threshold,
-                min_scene_len=min_scene_len_frames,
-                downscale_factor=downscale_factor
+                min_scene_len=min_scene_len_frames
+                # window_width / weights keep defaults
             )
         elif method == "content":
             det = ContentDetector(
@@ -141,9 +146,3 @@ def detect_scenes(
     if verbose:
         print(f"Assigned {current} scenes.")
     return shotlist
-
-def _parse_window_time(t: str, base: FrameTimecode) -> FrameTimecode:
-    # Accept HH:MM:SS.mmm or seconds float
-    if ":" in t:
-        return FrameTimecode(timecode=t, fps=base.framerate)
-    return FrameTimecode(timecode=float(t), fps=base.framerate)
