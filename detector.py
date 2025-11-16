@@ -101,11 +101,11 @@ def detect_shots(
         if end_s - start_s < 1e-3:
             continue
         shots.append({
+            "Ignore": "",
+            "Scene": "",
             "Start": _tc(start_s),
             "End": _tc(end_s),
-            "Ignore": "",
             "Shot_Caption": "",
-            "Scene": "",
             "Scene_Caption": ""
         })
 
