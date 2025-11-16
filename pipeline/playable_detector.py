@@ -3,6 +3,7 @@
 
 from typing import List, Dict, Optional
 import os
+import math
 
 try:
     from scenedetect import VideoManager, SceneManager, StatsManager
@@ -27,6 +28,27 @@ def _parse_window_time(t: Optional[str], base: FrameTimecode) -> Optional[FrameT
         return FrameTimecode(timecode=t, fps=base.framerate)
     return FrameTimecode(timecode=float(t), fps=base.framerate)
 
+def _split_shot(
+    s_tc: FrameTimecode,
+    e_tc: FrameTimecode,
+    max_len: float,
+    fps: float
+) -> List[tuple[FrameTimecode, FrameTimecode]]:
+    """Evenly split [s,e] into N parts so that each duration <= max_len."""
+    dur = max(0.0, e_tc.get_seconds() - s_tc.get_seconds())
+    if max_len <= 0 or dur <= max_len:
+        return [(s_tc, e_tc)]
+    n = max(2, int(math.ceil(dur / max_len)))
+    part = dur / n
+    chunks: List[tuple[FrameTimecode, FrameTimecode]] = []
+    s0 = s_tc.get_seconds()
+    for k in range(n):
+        cs = FrameTimecode(timecode=s0 + k * part, fps=fps)
+        ce = FrameTimecode(timecode=min(s0 + (k + 1) * part, e_tc.get_seconds()), fps=fps)
+        if ce.get_seconds() - cs.get_seconds() > 1e-6:
+            chunks.append((cs, ce))
+    return chunks
+
 def detect_shots(
     video_path: str,
     method: str = "adaptive",
@@ -36,17 +58,20 @@ def detect_shots(
     luma_only: bool = False,
     start: Optional[str] = None,
     end: Optional[str] = None,
+    shot_max_length: float = -1.0,
     verbose: bool = False
 ) -> List[Dict]:
     """
     AdaptiveDetector (PySceneDetect 0.6.x) does NOT support downscale_factor or luma_only.
     ContentDetector supports: threshold, min_scene_len, luma_only, downscale_factor, kernel_size.
+    Also supports optional splitting of long shots by --shot_max_length.
     """
     _ensure(video_path)
     vm = VideoManager([video_path])
     vm.start()
     try:
         base_tc = vm.get_base_timecode()
+        fps = float(base_tc.framerate)
         start_tc = _parse_window_time(start, base_tc) if start else None
         end_tc = _parse_window_time(end, base_tc) if end else None
         if start_tc or end_tc:
@@ -78,20 +103,34 @@ def detect_shots(
     finally:
         vm.release()
 
+    # Fallback to full window if no cuts
     if not scenes:
         if verbose:
             print("No cuts detected; creating single shot.")
-        # Fallback single shot covering requested window or full duration
         vm2 = VideoManager([video_path])
         vm2.start()
         full_end = vm2.get_base_timecode() + vm2.get_duration()
         vm2.release()
-        s = start_tc or base_tc
-        e = end_tc or full_end
-        scenes = [(s, e)]
+        s_tc = start_tc or base_tc
+        e_tc = end_tc or full_end
+        scenes = [(s_tc, e_tc)]
 
-    shots: List[Dict] = []
+    # Apply optional splitting
+    final_scenes: List[tuple[FrameTimecode, FrameTimecode]] = []
     for i, (s_tc, e_tc) in enumerate(scenes):
+        dur = max(0.0, e_tc.get_seconds() - s_tc.get_seconds())
+        chunks = _split_shot(s_tc, e_tc, shot_max_length, fps)
+        if len(chunks) > 1:
+            approx = dur / len(chunks)
+            print(f"  [SPLIT] Shot {i} {dur:.2f}s > max {shot_max_length:.2f}s → {len(chunks)} parts (~{approx:.2f}s each)")
+            if verbose:
+                for j, (cs, ce) in enumerate(chunks, 1):
+                    print(f"          └─ part {j}: {cs.get_timecode()} → {ce.get_timecode()} ({ce.get_seconds()-cs.get_seconds():.2f}s)")
+        final_scenes.extend(chunks)
+
+    # Build shot rows
+    shots: List[Dict] = []
+    for i, (s_tc, e_tc) in enumerate(final_scenes):
         shots.append({
             "Ignore": "",
             "Scene": "",

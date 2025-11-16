@@ -9,7 +9,7 @@ import subprocess  # added
 import shutil      # added
 import functools
 
-from ollama import OllamaClient
+from pipeline.ollama_client import OllamaClient
 
 _schema_cache: Optional[dict] = None
 

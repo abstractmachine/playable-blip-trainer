@@ -38,6 +38,7 @@ def parse_arguments():
     # New: detection method
     parser.add_argument("--method", choices=["adaptive","content"], default="adaptive", help="Shot detection method")
     parser.add_argument("--threshold", type=float, default=3.0, help="Detection threshold (default 3.0 adaptive)")
+    parser.add_argument("--shot_max_length", type=float, default=-1.0, help="Max seconds per detected shot; -1 disables splitting")
 
     # Show help if no args
     if len(sys.argv) == 1:

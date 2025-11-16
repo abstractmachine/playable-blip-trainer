@@ -1,9 +1,9 @@
 import os
-from data import Cinematheque, Gameplay
-from annotate import annotate_shots, annotate_scenes, has_scenes
-from ollama import OllamaClient
-from parse import parse_arguments
-from detector import detect_shots, detect_scenes
+from pipeline.playable_data import Cinematheque, Gameplay
+from pipeline.playable_annotator import annotate_shots, annotate_scenes, has_scenes
+from pipeline.ollama_client import OllamaClient
+from pipeline.playable_parser import parse_arguments
+from pipeline.playable_detector import detect_shots, detect_scenes
 
 def main():
     args = parse_arguments()
@@ -43,11 +43,12 @@ def main():
                 if existing and len(existing) > 0:
                     print(f"⊘ Shotlist already exists ({len(existing)} shots), skipping detection")
                     return
-                print(f"Detecting shots (method={args.method}, threshold={args.threshold})...")
+                print(f"Detecting shots (method={args.method}, threshold={args.threshold}, max_len={'off' if args.shot_max_length<=0 else args.shot_max_length}s)...")
                 shots = detect_shots(
                     video_path,
                     method=args.method,
                     threshold=args.threshold,
+                    shot_max_length=args.shot_max_length,
                     verbose=args.verbose
                 )
                 if not shots:
@@ -102,7 +103,13 @@ def main():
                     print(f"✗ Video not found: {video_path}")
                     return
                 print("No shotlist found. Auto-detecting shots...")
-                shotlist = detect_shots(video_path, verbose=args.verbose)
+                shotlist = detect_shots(
+                    video_path,
+                    method=args.method,
+                    threshold=args.threshold,
+                    shot_max_length=args.shot_max_length,
+                    verbose=args.verbose
+                )
                 if not shotlist:
                     print("✗ Shot detection produced no shots; aborting annotation.")
                     return
