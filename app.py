@@ -3,7 +3,7 @@ from data import Cinematheque, Gameplay
 from annotate import annotate_shots, annotate_scenes, has_scenes
 from ollama import OllamaClient
 from parse import parse_arguments
-from detector import detect_shots, detect_scenes  # NEW
+from detector import detect_shots, detect_scenes  # already present
 
 def main():
     args = parse_arguments()
@@ -77,9 +77,28 @@ def main():
         # Annotate mode
         if args.action == 'annotate':
             shotlist = library.load_shotlist(item)
+
+            # Auto-detect shots if missing and we're annotating shots
+            if args.type == 'shot' and (not shotlist or len(shotlist) == 0):
+                filename = item.get('Filename') or item.get('filename', '')
+                video_path = os.path.join(args.project_root, library.video_dir, filename)
+                if not os.path.exists(video_path):
+                    print(f"✗ Video not found: {video_path}")
+                    return
+                print("No shotlist found. Auto-detecting shots...")
+                shotlist = detect_shots(video_path, verbose=args.verbose)
+                if not shotlist:
+                    print("✗ Shot detection produced no shots; aborting annotation.")
+                    return
+                if library.save_shotlist(item, shotlist):
+                    print(f"✓ Auto-detected and saved {len(shotlist)} shots")
+                else:
+                    print("✗ Failed to save auto-detected shotlist")
+
             if not shotlist:
                 print("✗ No shotlist found")
                 return
+
             if args.type == 'shot':
                 video_path = library.get_video_path(item)
                 if not os.path.exists(video_path):
@@ -96,7 +115,7 @@ def main():
                     limit=args.annotation_count,
                     start_index=args.shot_index,
                     verbose=args.verbose,
-                    save_callback=lambda sl: library.save_shotlist(item, sl)  # Save after each shot
+                    save_callback=lambda sl: library.save_shotlist(item, sl)
                 )
                 if library.save_shotlist(item, out):
                     print("✓ Saved shot annotations")
