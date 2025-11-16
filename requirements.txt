@@ -2,6 +2,7 @@ opencv-python>=4.9.0
 numpy>=1.24.0
 requests>=2.31.0
 jsonschema>=4.22.0
+scenedetect>=0.6.3
 
 # (Future) BLIP / Transformers stack:
 transformers>=4.44.0

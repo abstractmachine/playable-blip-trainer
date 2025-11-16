@@ -35,6 +35,10 @@ def parse_arguments():
     parser.add_argument("--temperature", type=float, default=0.3, help="Model temperature (0.0-1.0)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
+    # New: detection method
+    parser.add_argument("--method", choices=["adaptive","content"], default="adaptive", help="Shot detection method")
+    parser.add_argument("--threshold", type=float, default=3.0, help="Detection threshold (default 3.0 adaptive)")
+
     # Show help if no args
     if len(sys.argv) == 1:
         parser.print_help()

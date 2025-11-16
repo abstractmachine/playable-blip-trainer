@@ -3,7 +3,7 @@ from data import Cinematheque, Gameplay
 from annotate import annotate_shots, annotate_scenes, has_scenes
 from ollama import OllamaClient
 from parse import parse_arguments
-from detector import detect_shots, detect_scenes  # already present
+from detector import detect_shots, detect_scenes
 
 def main():
     args = parse_arguments()
@@ -43,9 +43,13 @@ def main():
                 if existing and len(existing) > 0:
                     print(f"⊘ Shotlist already exists ({len(existing)} shots), skipping detection")
                     return
-                
-                print("Detecting shots...")
-                shots = detect_shots(video_path, verbose=args.verbose)
+                print(f"Detecting shots (method={args.method}, threshold={args.threshold})...")
+                shots = detect_shots(
+                    video_path,
+                    method=args.method,
+                    threshold=args.threshold,
+                    verbose=args.verbose
+                )
                 if not shots:
                     print("✗ No shots detected")
                     return

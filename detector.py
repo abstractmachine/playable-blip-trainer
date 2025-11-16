@@ -1,116 +1,106 @@
-import cv2
-import os
+# PySceneDetect-based shot & scene detection.
+# Requires: pip install scenedetect
+
 from typing import List, Dict, Optional
+import os
 
-def _tc(seconds: float) -> str:
-    ms = int(round((seconds - int(seconds)) * 1000))
-    total = int(seconds)
-    hh = total // 3600
-    mm = (total % 3600) // 60
-    ss = total % 60
-    return f"{hh:02d}:{mm:02d}:{ss:02d}.{ms:03d}"
+try:
+    from scenedetect import VideoManager, SceneManager, StatsManager
+    from scenedetect.detectors import AdaptiveDetector, ContentDetector
+    from scenedetect.frame_timecode import FrameTimecode
+except ImportError:
+    VideoManager = None
 
-def _parse_tc(tc: str) -> float:
-    if not tc:
-        return 0.0
-    parts = tc.split(":")
-    try:
-        if len(parts) == 3:
-            hh = int(parts[0]); mm = int(parts[1]); ss = float(parts[2])
-        elif len(parts) == 2:
-            hh = 0; mm = int(parts[0]); ss = float(parts[1])
-        else:
-            return float(tc)
-        return hh*3600 + mm*60 + ss
-    except Exception:
-        return 0.0
+def _ensure(video_path: str):
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(video_path)
+    if VideoManager is None:
+        raise RuntimeError("scenedetect not installed. pip install scenedetect")
+
+def _format_tc(ftc: FrameTimecode) -> str:
+    return ftc.get_timecode()  # HH:MM:SS.mmm
 
 def detect_shots(
     video_path: str,
-    threshold: float = 0.6,
-    stride: int = 12,
-    min_shot_sec: float = 0.5,
+    method: str = "adaptive",
+    threshold: Optional[float] = 3.0,          # DEFAULT CHANGED: explicit 3.0
+    min_scene_len_frames: int = 12,
+    downscale_factor: int = 2,
+    luma_only: bool = False,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
     verbose: bool = False
 ) -> List[Dict]:
     """
-    Naive shot boundary detection using HSV histogram distance.
-    Writes a shot list with Start/End timecodes.
+    Returns list of shot dicts: Start/End + empty caption fields.
     """
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print(f"✗ Cannot open video: {video_path}")
-        return []
+    _ensure(video_path)
+    vm = VideoManager([video_path])
+    base_tc = None
 
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-    duration = frame_count / fps if frame_count > 0 else 0.0
+    vm.start()
+    try:
+        base_tc = vm.get_base_timecode()
+        # Optional window
+        start_tc = _parse_window_time(start, base_tc) if start else None
+        end_tc = _parse_window_time(end, base_tc) if end else None
+        if start_tc or end_tc:
+            vm.set_duration(start_time=start_tc, end_time=end_tc)
 
-    def hist(frame):
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        h = cv2.calcHist([hsv], [0,1], None, [50,60], [0,180, 0,256])
-        return cv2.normalize(h, h).flatten()
+        stats = StatsManager()
+        sm = SceneManager(stats)
+
+        if method == "adaptive":
+            det = AdaptiveDetector(
+                adaptive_threshold=threshold,
+                min_scene_len=min_scene_len_frames,
+                downscale_factor=downscale_factor
+            )
+        elif method == "content":
+            det = ContentDetector(
+                threshold=threshold,
+                min_scene_len=min_scene_len_frames,
+                luma_only=luma_only,
+                downscale_factor=downscale_factor,
+                kernel_size=3
+            )
+        else:
+            raise ValueError(f"Unknown method: {method}")
+
+        sm.add_detector(det)
+        sm.detect_scenes(vm)
+        scenes = sm.get_scene_list()
+    finally:
+        vm.release()
+
+    if not scenes:
+        if verbose:
+            print("No cuts detected; creating single shot.")
+        # Fallback single shot covering requested window or full duration
+        vm2 = VideoManager([video_path])
+        vm2.start()
+        full_end = vm2.get_base_timecode() + vm2.get_duration()
+        vm2.release()
+        s = start_tc or base_tc
+        e = end_tc or full_end
+        scenes = [(s, e)]
 
     shots: List[Dict] = []
-    prev_hist = None
-    cut_times: List[float] = [0.0]
-
-    frame_idx = 0
-    ok, frame = cap.read()
-    if not ok or frame is None:
-        cap.release()
-        return []
-    prev_hist = hist(frame)
-    frame_idx += 1
-
-    while True:
-        # Skip stride-1 frames
-        for _ in range(stride-1):
-            ok = cap.grab()
-            if not ok:
-                break
-            frame_idx += 1
-        ok, frame = cap.retrieve()
-        if not ok or frame is None:
-            break
-        frame_idx += 1
-
-        h = hist(frame)
-        dist = cv2.compareHist(prev_hist, h, cv2.HISTCMP_BHATTACHARYYA)
-        prev_hist = h
-
-        if dist >= threshold:
-            t = min((frame_idx-1) / fps, max(0.0, duration - 1.0/fps))
-            # Respect min shot length
-            if t - cut_times[-1] >= min_shot_sec:
-                cut_times.append(t)
-                if verbose:
-                    print(f"    [CUT] {t:.3f}s (dist={dist:.3f})")
-
-        if frame_count and frame_idx >= frame_count:
-            break
-
-    cap.release()
-    # Close last shot
-    if not cut_times or cut_times[-1] < duration:
-        cut_times.append(duration)
-
-    # Assemble shot rows
-    for i in range(len(cut_times)-1):
-        start_s = cut_times[i]
-        end_s = cut_times[i+1]
-        if end_s - start_s < 1e-3:
-            continue
+    for i, (s_tc, e_tc) in enumerate(scenes):
         shots.append({
             "Ignore": "",
             "Scene": "",
-            "Start": _tc(start_s),
-            "End": _tc(end_s),
+            "Start": _format_tc(s_tc),
+            "End": _format_tc(e_tc),
             "Shot_Caption": "",
             "Scene_Caption": ""
         })
+        if verbose:
+            dur = e_tc.get_seconds() - s_tc.get_seconds()
+            print(f"  [SHOT {i}] {s_tc.get_seconds():.3f}s → {e_tc.get_seconds():.3f}s ({dur:.3f}s)")
 
     if verbose:
-        print(f"Detected {len(shots)} shots (duration {duration:.2f}s, fps {fps:.2f})")
+        print(f"Detected {len(shots)} shots.")
     return shots
 
 def detect_scenes(
@@ -120,36 +110,40 @@ def detect_scenes(
     verbose: bool = False
 ) -> List[Dict]:
     """
-    Naive scene grouping:
-    - Start Scene 1 at first shot
-    - Increment scene when time gap between previous End and current Start >= gap_sec
-    - Ensure minimum scene size by delaying increment if needed
+    Simple gap-based scene grouping atop existing shotlist.
     """
+    def _parse_tc(tc: str) -> float:
+        if not tc:
+            return 0.0
+        hh, mm, rest = tc.split(":")
+        ss = float(rest)
+        return int(hh)*3600 + int(mm)*60 + ss
+
     if not shotlist:
         return shotlist
 
-    current_scene = 1
-    scene_count = 1
-    shots_in_scene = 0
+    current = 1
+    count_in = 0
     last_end = _parse_tc(shotlist[0].get("End","0"))
-
-    for i, shot in enumerate(shotlist):
+    for shot in shotlist:
         start = _parse_tc(shot.get("Start","0"))
         end = _parse_tc(shot.get("End","0"))
-
-        gap = max(0.0, start - last_end)
-        should_cut = gap >= gap_sec and shots_in_scene >= min_scene_shots
-
-        if should_cut:
-            current_scene += 1
-            shots_in_scene = 0
+        gap = start - last_end
+        if gap >= gap_sec and count_in >= min_scene_shots:
+            current += 1
+            count_in = 0
             if verbose:
-                print(f"    [SCENE CUT] gap={gap:.2f}s -> Scene {current_scene}")
-
-        shot["Scene"] = str(current_scene)
-        shots_in_scene += 1
+                print(f"  [SCENE CUT] gap={gap:.2f}s → Scene {current}")
+        shot["Scene"] = str(current)
+        count_in += 1
         last_end = max(last_end, end)
 
     if verbose:
-        print(f"Assigned {current_scene} scenes.")
+        print(f"Assigned {current} scenes.")
     return shotlist
+
+def _parse_window_time(t: str, base: FrameTimecode) -> FrameTimecode:
+    # Accept HH:MM:SS.mmm or seconds float
+    if ":" in t:
+        return FrameTimecode(timecode=t, fps=base.framerate)
+    return FrameTimecode(timecode=float(t), fps=base.framerate)
