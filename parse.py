@@ -18,8 +18,11 @@ def parse_arguments():
     # Core selection
     parser.add_argument("--index", type=int, default=-1, help="Item index from metadata CSV")
     parser.add_argument("--action", choices=["annotate", "erase"], help="Action to perform")
-    parser.add_argument("--type", choices=["shot", "scene"], default="shot", help="Annotation type (default: shot)")
-    parser.add_argument("--media", choices=["movie", "gameplay"], default="movie", help="Media library (default: movie)")
+    parser.add_argument("--type", choices=["shot", "scene"], default="shot", help="Operation type")
+    parser.add_argument("--media", choices=["movie", "gameplay"], default="movie", help="Media library")
+
+    # New: detection mode
+    parser.add_argument("--detect", action="store_true", help="Run detection (depends on --type)")
 
     # Annotation controls
     parser.add_argument("--shot_index", type=int, default=1, help="Starting shot index (1-based)")
@@ -29,7 +32,7 @@ def parse_arguments():
     # Model/runtime
     parser.add_argument("--model", type=str, default="gemma3:27b", help="Ollama model name")
     parser.add_argument("--num-ctx", type=int, default=8192, help="Ollama context window")
-    parser.add_argument("--temperature", type=float, default=0.3, help="Model temperature (0.0-1.0, default 0.3)")
+    parser.add_argument("--temperature", type=float, default=0.3, help="Model temperature (0.0-1.0)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     # Show help if no args

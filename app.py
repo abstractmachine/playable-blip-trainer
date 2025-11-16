@@ -3,6 +3,7 @@ from data import Cinematheque, Gameplay
 from annotate import annotate_shots, annotate_scenes, has_scenes
 from ollama import OllamaClient
 from parse import parse_arguments
+from detector import detect_shots, detect_scenes  # NEW
 
 def main():
     args = parse_arguments()
@@ -28,6 +29,40 @@ def main():
             return
         print(f"\n{media_type.capitalize()} [{idx}]: {library.get_title(item)}")
 
+        # Detection mode
+        if args.detect:
+            filename = item.get('Filename') or item.get('filename', '')
+            video_path = os.path.join(args.project_root, library.video_dir, filename)
+            if not os.path.exists(video_path):
+                print(f"✗ Video not found: {video_path}")
+                return
+
+            if args.type == 'shot':
+                print("Detecting shots...")
+                shots = detect_shots(video_path, verbose=args.verbose)
+                if not shots:
+                    print("✗ No shots detected")
+                    return
+                if library.save_shotlist(item, shots):
+                    print(f"✓ Saved shotlist with {len(shots)} shots")
+                else:
+                    print("✗ Failed to save shotlist")
+                return
+
+            if args.type == 'scene':
+                print("Detecting scenes...")
+                shotlist = library.load_shotlist(item)
+                if not shotlist:
+                    print("✗ No shotlist found (required for scene detection)")
+                    return
+                out = detect_scenes(shotlist, verbose=args.verbose)
+                if library.save_shotlist(item, out):
+                    print("✓ Saved scene annotations")
+                else:
+                    print("✗ Failed to save")
+            return
+
+        # Erase mode
         if args.action == 'erase':
             if args.type == 'shot':
                 print("Erasing Shot_Caption entries...")
@@ -39,6 +74,7 @@ def main():
                 print("✓ Done" if ok else "✗ Failed")
             return
 
+        # Annotate mode
         if args.action == 'annotate':
             shotlist = library.load_shotlist(item)
             if not shotlist:

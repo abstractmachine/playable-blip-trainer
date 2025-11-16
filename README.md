@@ -14,11 +14,17 @@ We will be using [Ollama](https://ollama.com) to run [Gemma 3:27b](https://huggi
 We are working with an Ubuntu machine with an NVidia GeForce RTX 4070 Ti 12Gb and CUDA v12.9.
 
 ### Pyenv
+
+#### Install
 ```
-# 1. pyenv install 3.11.9
-# 2. pyenv virtualenv 3.11.9 playable-blip-trainer
-# 3. pyenv activate playable-blip-trainer
-# 4. pip install -r requirements.txt
+% pyenv install 3.11.9
+% pyenv virtualenv 3.11.9 playable-blip-trainer
+% pip install -r requirements.txt
+```
+
+#### Activate
+```
+% pyenv activate playable-blip-trainer
 ```
 
 With all this we tested the app help menu:
