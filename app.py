@@ -38,6 +38,12 @@ def main():
                 return
 
             if args.type == 'shot':
+                # Check if shotlist already exists
+                existing = library.load_shotlist(item)
+                if existing and len(existing) > 0:
+                    print(f"⊘ Shotlist already exists ({len(existing)} shots), skipping detection")
+                    return
+                
                 print("Detecting shots...")
                 shots = detect_shots(video_path, verbose=args.verbose)
                 if not shots:
@@ -55,6 +61,12 @@ def main():
                 if not shotlist:
                     print("✗ No shotlist found (required for scene detection)")
                     return
+                
+                # Check if scenes already assigned
+                if has_scenes(shotlist):
+                    print("⊘ Scenes already detected, skipping")
+                    return
+                
                 out = detect_scenes(shotlist, verbose=args.verbose)
                 if library.save_shotlist(item, out):
                     print("✓ Saved scene annotations")
